@@ -4,6 +4,7 @@ import br.com.dh.testes03.dao.ContaDAO;
 import br.com.dh.testes03.exception.ContaInexistenteException;
 import br.com.dh.testes03.exception.InvalidNumberException;
 import br.com.dh.testes03.modelo.ContaCorrente;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,44 +25,43 @@ class ContaCorrenteServiceTest {
     @Mock
     private ContaDAO dao;
 
+    private ContaCorrente contaCorrente;
+
+    @BeforeEach
+    void setup() {
+        contaCorrente = new ContaCorrente(1, "Cliente 1");
+    }
+
 
     @Test
     @DisplayName("Valida nova conta")
     void novaContaCorrente_retornaNovaContaCorrente_quandoSucesso() {
         // Arrange
-        int numeroConta = 1;
-        String nomeCliente = "Cliente 1";
-        ContaCorrente novaConta = new ContaCorrente(numeroConta, nomeCliente);
 
-        Mockito.when(dao.novaContaCorrente(ArgumentMatchers.anyString()))
-                .thenReturn(novaConta);
+        Mockito.when(dao.novaContaCorrente(ArgumentMatchers.anyString())).thenReturn(contaCorrente);
 
         // Act
-        ContaCorrente cc = service.novaContaCorrente(nomeCliente);
+        ContaCorrente cc = service.novaContaCorrente(contaCorrente.getCliente());
 
         // Assert
         assertThat(cc).isNotNull();
         assertThat(cc.getNumero()).isPositive();
-        assertThat(cc.getCliente()).isEqualTo(nomeCliente);
+        assertThat(cc.getCliente()).isEqualTo(contaCorrente.getCliente());
     }
 
     @Test
     void getConta_retornaContaCorrente_quandoContaExiste() throws ContaInexistenteException {
         // Arrange
-        int numeroConta = 1;
-        String nomeCliente = "Cliente 1";
-        ContaCorrente contaCorrente = new ContaCorrente(numeroConta, nomeCliente);
 
-        Mockito.when(dao.getContaCorrente(ArgumentMatchers.anyInt()))
-                .thenReturn(contaCorrente);
+        Mockito.when(dao.getContaCorrente(ArgumentMatchers.anyInt())).thenReturn(contaCorrente);
 
         // Act
-        ContaCorrente cc = service.getConta(numeroConta);
+        ContaCorrente cc = service.getConta(contaCorrente.getNumero());
 
         // Assert
         assertThat(cc).isNotNull();
-        assertThat(cc.getNumero()).isEqualTo(numeroConta);
-        assertThat(cc.getCliente()).isEqualTo(nomeCliente);
+        assertThat(cc.getNumero()).isEqualTo(contaCorrente.getNumero());
+        assertThat(cc.getCliente()).isEqualTo(contaCorrente.getCliente());
         assertThat(cc.getSaldo()).isZero();
     }
 
@@ -71,8 +71,7 @@ class ContaCorrenteServiceTest {
         int numeroContaInexistente = 999;
 
         // Act
-        BDDMockito.given(dao.getContaCorrente(ArgumentMatchers.anyInt()))
-                .willThrow(new ContaInexistenteException("Conta não existe"));
+        BDDMockito.given(dao.getContaCorrente(ArgumentMatchers.anyInt())).willThrow(new ContaInexistenteException("Conta não existe"));
 
         // Assert
         assertThrows(ContaInexistenteException.class, () -> service.getConta(numeroContaInexistente));
@@ -81,27 +80,21 @@ class ContaCorrenteServiceTest {
     @Test
     void sacar_retornaVerdadeiro_quandoContaExisteEValorValidoESaldoSuficiente() throws InvalidNumberException, ContaInexistenteException {
         // setup
-        int numeroConta = 1;
-        String nomeCliente = "Cliente 1";
+
         double valorOperacao = 100.0;
 
-        ContaCorrente novaConta = new ContaCorrente(numeroConta, nomeCliente);
-        novaConta.depositar(valorOperacao);
+        contaCorrente.depositar(valorOperacao);
 
-        // Mockar getConta
-        Mockito.when(dao.getContaCorrente(ArgumentMatchers.anyInt()))
-                .thenReturn(novaConta);
-
-        // Mockar updateConta
-        Mockito.when(dao.updateConta(ArgumentMatchers.any()))
-                .thenReturn(true);
+        // Mockar getConta e updateConta
+        Mockito.when(dao.getContaCorrente(ArgumentMatchers.anyInt())).thenReturn(contaCorrente);
+        Mockito.when(dao.updateConta(ArgumentMatchers.any())).thenReturn(true);
 
         // run
-        boolean success = service.sacar(numeroConta, valorOperacao);
+        boolean success = service.sacar(contaCorrente.getNumero(), valorOperacao);
 
         // validate
         assertThat(success).isTrue();
-        assertThat(novaConta.getSaldo()).isZero();
+        assertThat(contaCorrente.getSaldo()).isZero();
     }
 
     @Test
@@ -111,8 +104,7 @@ class ContaCorrenteServiceTest {
         double valorOperacao = 100.0;
 
         // Act
-        BDDMockito.given(dao.getContaCorrente(ArgumentMatchers.anyInt()))
-                .willThrow(new ContaInexistenteException("Conta não existe"));
+        BDDMockito.given(dao.getContaCorrente(ArgumentMatchers.anyInt())).willThrow(new ContaInexistenteException("Conta não existe"));
 
         // Assert
         assertThrows(ContaInexistenteException.class, () -> service.getConta(numeroContaInexistente));
@@ -122,17 +114,13 @@ class ContaCorrenteServiceTest {
     @Test
     void sacar_LancaExcecaoInvalidNumberException_quandoValorOperacaoInvalido() throws ContaInexistenteException {
         // Arrange
-        int numeroConta = 1;
         double valorOperacao = -100.0;
-        String nomeCliente = "Cliente 1";
-        ContaCorrente novaConta = new ContaCorrente(numeroConta, nomeCliente);
 
         // Act
-        Mockito.when(dao.getContaCorrente(ArgumentMatchers.anyInt()))
-                .thenReturn(novaConta);
+        Mockito.when(dao.getContaCorrente(ArgumentMatchers.anyInt())).thenReturn(contaCorrente);
 
         // Assert
-        assertThrows(InvalidNumberException.class, () -> service.sacar(numeroConta, valorOperacao));
+        assertThrows(InvalidNumberException.class, () -> service.sacar(contaCorrente.getNumero(), valorOperacao));
         verify(dao, never()).updateConta(ArgumentMatchers.any());
     }
 

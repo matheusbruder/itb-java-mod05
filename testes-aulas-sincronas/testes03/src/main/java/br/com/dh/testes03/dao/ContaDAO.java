@@ -106,6 +106,10 @@ public class ContaDAO {
         }
     }
 
+    public void deleteAll() {
+        contas.clear();
+    }
+
     public List<String> listarTodasContas() {
         return contas.values().stream()
                 .map(c -> c.toString() + "\n")
